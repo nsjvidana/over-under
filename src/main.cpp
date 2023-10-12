@@ -35,6 +35,7 @@ inline void autonomous() {
     //NOTE: half len is 6in
     //      Same for the feeder 
     //      Mat size is 2' x 2' (24" x 24")
+    DriveTrain.setDriveVelocity(50, percent);
 
     DriveTrain.driveFor(24,vex::distanceUnits::in);
     DriveTrain.turnFor(90, vex::rotationUnits::deg);
@@ -45,7 +46,8 @@ inline void autonomous() {
     DriveTrain.turnFor(180, vex::rotationUnits::deg);
     //drop the triball and take the feeder back in to not bash the feeder
     DriveTrain.setDriveVelocity(99, percent);
-    DriveTrain.driveFor(18, vex::distanceUnits::in); //ram into the ball
+    DriveTrain.driveFor(18, vex::distanceUnits::in); //ram the ball under the net
+    DriveTrain.setDriveVelocity(50, percent);
 
 }
 
@@ -64,8 +66,9 @@ inline void controlDriveTrain() {
 }
 
 /**
- * Controll the feeder using the R1 and R2 buttons
+ * Control the feeder using the R1 and R2 buttons
  * Press R1 to reel in, R2 to release (this might change depending on team's decisions)
+ * TODO: add ability to extrude/retract feeder since that mechanism is currently being built
 */
 inline void controlFeeder() {
     //Subtract the states to get the velocity's sign
@@ -74,6 +77,7 @@ inline void controlFeeder() {
     //  When both are pressed, don't move.
     int direction = Controller1.ButtonR2.pressing() - Controller1.ButtonR1.pressing();
     Feeder.setVelocity(80*direction, percent);
+
 }
 
 int main() {
@@ -86,15 +90,15 @@ int main() {
     //15s autonomous mode
     Brain.Screen.clearLine(2);
     Brain.Screen.print("Mode: Auto");
-    while(timer().system() < 15000) {
-        autonomous();
-    }
+    vex::thread autonomousThread = vex::thread(autonomous); //create auto thread that controls the bot. 
+    autonomousThread.detach();
+    wait(15, vex::timeUnits::sec); //after 15 seconds, 
+    autonomousThread.interrupt(); //stop auto immediately.
 
-    //switch to drive mode
+    //switch to drive mode after the 15s period
     Brain.Screen.clearLine(2);
     Brain.Screen.print("Mode: Drive");
     while(1) {
-
         controlDriveTrain();
         controlFeeder();
 

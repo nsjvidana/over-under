@@ -16,11 +16,11 @@ vex::brain       Brain;
 controller Controller1 = controller(primary);
 
 //TODO: change ports/ratios value when actually building stuff
-motor LeftMotor = motor(PORT2, ratio6_1, false);
-motor RightMotor = motor(PORT1, ratio6_1, true);
+motor LeftMotor = motor(PORT11, ratio6_1, false);
+motor RightMotor = motor(PORT20, ratio6_1, true);
 
 //TODO maybe change the last parameter or smth
-drivetrain DriveTrain = drivetrain(LeftMotor, RightMotor, 320, 203, 190, vex::distanceUnits::mm, 6);
+drivetrain DriveTrain = drivetrain(LeftMotor, RightMotor, 320, 203, 190, vex::distanceUnits::mm, 1);
 
 motor Feeder = motor(PORT3, ratio18_1, false);
 
@@ -37,6 +37,7 @@ inline void autonomous() {
     //      Mat size is 2' x 2' (24" x 24")
     DriveTrain.setDriveVelocity(50, percent);
 
+    
     DriveTrain.driveFor(24,vex::distanceUnits::in);
     DriveTrain.turnFor(90, vex::rotationUnits::deg);
     DriveTrain.driveFor(60,vex::distanceUnits::in);

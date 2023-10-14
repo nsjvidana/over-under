@@ -27,6 +27,14 @@ motor Feeder = motor(PORT16, ratio18_1, false);
 motor FeederJoint = motor(PORT13, ratio36_1, false);
 
 
+//in inches
+double wheelRadius = 4;
+double circumference = 2 * M_PI * wheelRadius;
+double bodyDiameter = 6; 
+double driveVelocity = 30;
+double turnVelocity = 20;
+
+
 /*---------------------------------------------------------------------------*/
 /*                          Pre-Autonomous Functions                         */
 /*                                                                           */
@@ -46,6 +54,31 @@ void pre_auton(void) {
   Drivetrain.setDriveVelocity(50, percent);
 }
 
+
+/***************************Autonomous driving utils***************************/
+
+void driveFor(double distanceInInches) {
+  double amountOfTurns = (distanceInInches / circumference)*2;
+
+  LeftMotor.setVelocity(driveVelocity, percent);
+  RightMotor.setVelocity(driveVelocity, percent);
+
+  LeftMotor.spinFor(amountOfTurns*360, deg, false);
+  RightMotor.spinFor(amountOfTurns*360, deg);
+}
+
+void turn90Deg(int direction) {
+  double arcLength = (circumference*90)/360;
+  double degreesToTurn = (arcLength / circumference)*360*2;
+
+  LeftMotor.setVelocity(turnVelocity, percent);
+  RightMotor.setVelocity(turnVelocity, percent);
+  
+  LeftMotor.spinFor(degreesToTurn*-direction, deg, false);
+  RightMotor.spinFor(degreesToTurn*direction, deg);
+}
+
+
 /*---------------------------------------------------------------------------*/
 /*                                                                           */
 /*                              Autonomous Task                              */
@@ -63,6 +96,21 @@ void autonomous(void) {
   RightMotor.setVelocity(20, percent);
   
   Drivetrain.setDriveVelocity(20, percent);  
+
+  driveFor(60);
+  turn90Deg(-1);
+  driveFor(-6);
+
+  //drop ball
+  FeederJoint.spinFor(1300, deg);
+  Feeder.spinFor(-800, deg);
+  FeederJoint.spinFor(-1300, deg);
+
+  //ram ball
+  driveVelocity = 80;
+  driveFor(24);
+
+
 
   //Drivetrain controls
   Drivetrain.driveFor(60,vex::distanceUnits::in, true);
@@ -151,7 +199,7 @@ int main() {
   // Set up callbacks for autonomous and driver control periods.
   // Competition.autonomous(autonomous);
   // Competition.drivercontrol(usercontrol);
-  autonomous();
+  // autonomous();
   
   // Run the pre-autonomous function.
   pre_auton();

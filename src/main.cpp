@@ -12,7 +12,7 @@
 using namespace vex;
 
 // A global instance of competition
-// competition Competition;
+competition Competition;
 
 vex::brain       Brain;
 
@@ -92,11 +92,6 @@ void turn90Deg(int direction) {
 void autonomous(void) {
   Brain.Screen.print("Mode: Auto");
 
-  LeftMotor.setVelocity(20, percent);
-  RightMotor.setVelocity(20, percent);
-  
-  Drivetrain.setDriveVelocity(20, percent);  
-
   driveFor(60);
   turn90Deg(-1);
   driveFor(-6);
@@ -108,44 +103,7 @@ void autonomous(void) {
 
   //ram ball
   driveVelocity = 80;
-  driveFor(24);
-
-
-  return;
-  //Drivetrain controls
-  Drivetrain.driveFor(60,vex::distanceUnits::in, true);
-  Drivetrain.turnFor(-90, deg);
-
-  Drivetrain.driveFor(-6, vex::distanceUnits::in, true);
-
-  //drop the triball and take the feeder back in to not bash the feeder
-  FeederJoint.spinFor(1300, deg);
-  Feeder.spinFor(-800, deg);
-  FeederJoint.spinFor(-1300, deg);
-
-  //ram the ball under the net
-  Drivetrain.setDriveVelocity(80, percent);
-  Drivetrain.driveFor(24, vex::distanceUnits::in, true); 
-  
-  Drivetrain.setDriveVelocity(50, percent);
-  Drivetrain.driveFor(-6, vex::distanceUnits::in, true);
-  Drivetrain.turnFor(180, deg);
-
-  //extrude feeder and take the triball
-  FeederJoint.spinFor(1300, deg);
-  Feeder.spinFor(800, deg);
-  FeederJoint.spinFor(-1300, deg);
-
-  Drivetrain.turnFor(180, deg);
-
-  //drop the triball and take the feeder back in
-  FeederJoint.spinFor(1300, deg);
-  Feeder.spinFor(-800, deg);
-  FeederJoint.spinFor(-1300, deg);
-
-  Drivetrain.setDriveVelocity(80, percent);
-  Drivetrain.driveFor(24, vex::distanceUnits::in, true); //ram the ball under the net
-  Drivetrain.setDriveVelocity(50, percent);  
+  driveFor(24); 
 }
 
 /*---------------------------------------------------------------------------*/
@@ -197,9 +155,8 @@ void usercontrol(void) {
 //
 int main() {
   // Set up callbacks for autonomous and driver control periods.
-  // Competition.autonomous(autonomous);
-  // Competition.drivercontrol(usercontrol);
-  autonomous();
+  Competition.autonomous(autonomous);
+  Competition.drivercontrol(usercontrol);
   
   // Run the pre-autonomous function.
   pre_auton();

@@ -1,8 +1,8 @@
 /*----------------------------------------------------------------------------*/
 /*                                                                            */
 /*    Module:       main.cpp                                                  */
-/*    Author:       nlson                                                     */
-/*    Created:      10/13/2023, 10:22:01 AM                                    */
+/*    Author:       Nilson JVP                                                */
+/*    Created:      10/13/2023, 10:22:01 AM                                   */
 /*    Description:  V5 project                                                */
 /*                                                                            */
 /*----------------------------------------------------------------------------*/
@@ -18,12 +18,13 @@ vex::brain       Brain;
 
 controller Controller1 = controller(primary);
 
-motor LeftMotor = motor(PORT11, ratio6_1, false);
-motor RightMotor = motor(PORT20, ratio6_1, true);
+motor LeftMotor = motor(PORT2, ratio6_1, false);
+motor RightMotor = motor(PORT1, ratio6_1, true);
 
 drivetrain Drivetrain = drivetrain(LeftMotor, RightMotor, 320, 203, 190, vex::distanceUnits::mm, 1);
 
-motor Feeder = motor(PORT3, ratio18_1, false);
+motor Feeder = motor(PORT16, ratio18_1, false);
+motor FeederJoint = motor(PORT13, ratio36_1, false);
 
 
 /*---------------------------------------------------------------------------*/
@@ -94,8 +95,12 @@ void usercontrol(void) {
     //  When R1 is pressed, go backward.
     //  When R2 is pressed, go forward.
     //  When both are pressed, don't move.
-    int direction = Controller1.ButtonR2.pressing() - Controller1.ButtonR1.pressing();
-    Feeder.setVelocity(80*direction, percent);
+    int feederDirection = Controller1.ButtonR2.pressing() - Controller1.ButtonR1.pressing();
+    Feeder.setVelocity(100*feederDirection, percent);
+    int feederJointDirection = Controller1.ButtonL2.pressing() - Controller1.ButtonL1.pressing();
+    FeederJoint.setVelocity(50*feederJointDirection, percent);
+    Feeder.spin(forward);
+    FeederJoint.spin(forward);
 
     wait(20, msec); // Sleep the task for a short amount of time to
                     // prevent wasted resources.

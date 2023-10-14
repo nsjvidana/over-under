@@ -111,7 +111,7 @@ void autonomous(void) {
   driveFor(24);
 
 
-
+  return;
   //Drivetrain controls
   Drivetrain.driveFor(60,vex::distanceUnits::in, true);
   Drivetrain.turnFor(-90, deg);
@@ -199,7 +199,7 @@ int main() {
   // Set up callbacks for autonomous and driver control periods.
   // Competition.autonomous(autonomous);
   // Competition.drivercontrol(usercontrol);
-  // autonomous();
+  autonomous();
   
   // Run the pre-autonomous function.
   pre_auton();

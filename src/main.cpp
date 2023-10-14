@@ -2,109 +2,119 @@
 /*                                                                            */
 /*    Module:       main.cpp                                                  */
 /*    Author:       nlson                                                     */
-/*    Created:      9/19/2023, 3:34:30 PM                                     */
+/*    Created:      10/13/2023, 10:22:01 AM                                    */
 /*    Description:  V5 project                                                */
 /*                                                                            */
 /*----------------------------------------------------------------------------*/
+
 #include "vex.h"
 
 using namespace vex;
 
-// A global instance of vex::brain used for printing to the V5 brain screen
+// A global instance of competition
+competition Competition;
+
 vex::brain       Brain;
 
 controller Controller1 = controller(primary);
 
-//TODO: change ports/ratios value when actually building stuff
 motor LeftMotor = motor(PORT11, ratio6_1, false);
 motor RightMotor = motor(PORT20, ratio6_1, true);
 
-//TODO maybe change the last parameter or smth
-drivetrain DriveTrain = drivetrain(LeftMotor, RightMotor, 320, 203, 190, vex::distanceUnits::mm, 1);
+drivetrain Drivetrain = drivetrain(LeftMotor, RightMotor, 320, 203, 190, vex::distanceUnits::mm, 1);
 
 motor Feeder = motor(PORT3, ratio18_1, false);
 
-vex::timer Timer;
 
+/*---------------------------------------------------------------------------*/
+/*                          Pre-Autonomous Functions                         */
+/*                                                                           */
+/*  You may want to perform some actions before the competition starts.      */
+/*  Do them in the following function.  You must return from this function   */
+/*  or the autonomous and usercontrol tasks will not be started.  This       */
+/*  function is only called once after the V5 has been powered on and        */
+/*  not every time that the robot is disabled.                               */
+/*---------------------------------------------------------------------------*/
 
-/**
- * 
-*/
-inline void autonomous() {
-        
-    //NOTE: half len is 6in
-    //      Same for the feeder 
-    //      Mat size is 2' x 2' (24" x 24")
-    DriveTrain.setDriveVelocity(50, percent);
-
-    
-    DriveTrain.driveFor(24,vex::distanceUnits::in);
-    DriveTrain.turnFor(90, vex::rotationUnits::deg);
-    DriveTrain.driveFor(60,vex::distanceUnits::in);
-    DriveTrain.turnFor(90, vex::rotationUnits::deg);
-    //extrude feeder and take the triball
-    DriveTrain.driveFor(6, vex::distanceUnits::in);
-    DriveTrain.turnFor(180, vex::rotationUnits::deg);
-    //drop the triball and take the feeder back in to not bash the feeder
-    DriveTrain.setDriveVelocity(99, percent);
-    DriveTrain.driveFor(18, vex::distanceUnits::in); //ram the ball under the net
-    DriveTrain.setDriveVelocity(50, percent);
-
+void pre_auton(void) {
+  // All activities that occur before the competition starts
+  // Example: clearing encoders, setting servo positions, ...
 }
 
+/*---------------------------------------------------------------------------*/
+/*                                                                           */
+/*                              Autonomous Task                              */
+/*                                                                           */
+/*  This task is used to control your robot during the autonomous phase of   */
+/*  a VEX Competition.                                                       */
+/*                                                                           */
+/*  You must modify the code to add your own robot specific commands here.   */
+/*---------------------------------------------------------------------------*/
 
-/**
- * Move the robot using the left joystick
-*/
-inline void controlDriveTrain() {
-    int hAxis = Controller1.Axis4.position();
+void autonomous(void) {
+  Brain.Screen.print("Mode: Auto");
+  
+  Drivetrain.setDriveVelocity(50, percent);
+
+  Drivetrain.driveFor(24,vex::distanceUnits::in);
+  Drivetrain.turnFor(90, vex::rotationUnits::deg);
+  Drivetrain.driveFor(60,vex::distanceUnits::in);
+  Drivetrain.turnFor(90, vex::rotationUnits::deg);
+  //extrude feeder and take the triball
+  Drivetrain.driveFor(6, vex::distanceUnits::in);
+  Drivetrain.turnFor(180, vex::rotationUnits::deg);
+  //drop the triball and take the feeder back in to not bash the feeder
+  Drivetrain.setDriveVelocity(99, percent);
+  Drivetrain.driveFor(18, vex::distanceUnits::in); //ram the ball under the net
+  Drivetrain.setDriveVelocity(50, percent);
+}
+
+/*---------------------------------------------------------------------------*/
+/*                                                                           */
+/*                              User Control Task                            */
+/*                                                                           */
+/*  This task is used to control your robot during the user control phase of */
+/*  a VEX Competition.                                                       */
+/*                                                                           */
+/*  You must modify the code to add your own robot specific commands here.   */
+/*---------------------------------------------------------------------------*/
+void usercontrol(void) {
+  Brain.Screen.clearLine(1);
+  Brain.Screen.print("Mode: Drive");
+  while (1) {
+    //Drivetrain control
+    int hAxis = Controller1.Axis1.position();
     int vAxis = Controller1.Axis3.position();
     LeftMotor.setVelocity(vAxis + hAxis, percent);
     RightMotor.setVelocity(vAxis - hAxis, percent);
-
     LeftMotor.spin(forward);
     RightMotor.spin(forward);
-}
 
-/**
- * Control the feeder using the R1 and R2 buttons
- * Press R1 to reel in, R2 to release (this might change depending on team's decisions)
- * TODO: add ability to extrude/retract feeder since that mechanism is currently being built
-*/
-inline void controlFeeder() {
-    //Subtract the states to get the velocity's sign
+    //Feeder control (incomplete)
     //  When R1 is pressed, go backward.
     //  When R2 is pressed, go forward.
     //  When both are pressed, don't move.
     int direction = Controller1.ButtonR2.pressing() - Controller1.ButtonR1.pressing();
     Feeder.setVelocity(80*direction, percent);
 
+    wait(20, msec); // Sleep the task for a short amount of time to
+                    // prevent wasted resources.
+  }
 }
 
+//
+// Main will set up the competition functions and callbacks.
+//
 int main() {
-    // Allow other tasks to run
-    this_thread::sleep_for(10);
+  // Set up callbacks for autonomous and driver control periods.
+  // Competition.autonomous(autonomous);
+  Competition.drivercontrol(usercontrol);
 
-    Brain.Screen.print("Hello o/");
-    Brain.Screen.newLine();
+  // Run the pre-autonomous function.
+  pre_auton();
 
-    //15s autonomous mode
-    Brain.Screen.clearLine(2);
-    Brain.Screen.print("Mode: Auto");
-    vex::thread autonomousThread = vex::thread(autonomous); //create auto thread that controls the bot. 
-    autonomousThread.detach();
-    wait(15, vex::timeUnits::sec); //after 15 seconds, 
-    autonomousThread.interrupt(); //stop auto immediately.
-
-    //switch to drive mode after the 15s period
-    Brain.Screen.clearLine(2);
-    Brain.Screen.print("Mode: Drive");
-    while(1) {
-        controlDriveTrain();
-        controlFeeder();
-
-        wait(1, msec);
-    }
-
-    return 0;
+  // Prevent main from exiting with an infinite loop.
+  while (true) {
+    wait(100, msec);
+  }
 }

@@ -21,7 +21,7 @@ controller Controller1 = controller(primary);
 motor LeftMotor = motor(PORT2, ratio6_1, false);
 motor RightMotor = motor(PORT1, ratio6_1, true);
 
-drivetrain Drivetrain = drivetrain(LeftMotor, RightMotor, 319.19, 228.6, 190.5, mm, 1);
+// drivetrain Drivetrain = drivetrain(LeftMotor, RightMotor, 319.19, 228.6, 190.5, mm, 1);
 
 motor Feeder = motor(PORT16, ratio18_1, false);
 motor FeederJoint = motor(PORT13, ratio36_1, false);
@@ -30,7 +30,6 @@ motor FeederJoint = motor(PORT13, ratio36_1, false);
 //in inches
 double wheelRadius = 4;
 double circumference = 2 * M_PI * wheelRadius;
-double bodyDiameter = 6; 
 double driveVelocity = 30;
 double turnVelocity = 20;
 
@@ -49,25 +48,27 @@ void pre_auton(void) {
   // All activities that occur before the competition starts
   // Example: clearing encoders, setting servo positions, ...
   FeederJoint.setStopping(brakeType::brake);
-  FeederJoint.setVelocity(60, percent);
-  Drivetrain.setTurnVelocity(50 , percent);
-  Drivetrain.setDriveVelocity(50, percent);
+  FeederJoint.setVelocity(200, percent);
+  Feeder.setStopping(brakeType::brake);
+
+  LeftMotor.setStopping(brakeType::brake);
+  RightMotor.setStopping(brakeType::brake);
 }
 
 
 /***************************Autonomous driving utils***************************/
 
-void driveFor(double distanceInInches) {
+inline void driveFor(double distanceInInches) {
   double amountOfTurns = (distanceInInches / circumference)*2;
 
   LeftMotor.setVelocity(driveVelocity, percent);
   RightMotor.setVelocity(driveVelocity, percent);
 
   LeftMotor.spinFor(amountOfTurns*360, deg, false);
-  RightMotor.spinFor(amountOfTurns*360, deg);
+  RightMotor.spinFor(amountOfTurns*360, deg, true);
 }
 
-void turn90Deg(int direction) {
+inline void turn90Deg(int direction) {
   double arcLength = (circumference*90)/360;
   double degreesToTurn = (arcLength / circumference)*360*2;
 
@@ -75,7 +76,18 @@ void turn90Deg(int direction) {
   RightMotor.setVelocity(turnVelocity, percent);
   
   LeftMotor.spinFor(degreesToTurn*-direction, deg, false);
-  RightMotor.spinFor(degreesToTurn*direction, deg);
+  RightMotor.spinFor(degreesToTurn*direction, deg, true);
+}
+
+inline void turnALittle(int direction) {
+  double arcLength = (circumference*90)/360;
+  double degreesToTurn = (arcLength / circumference)*360;
+
+  LeftMotor.setVelocity(turnVelocity, percent);
+  RightMotor.setVelocity(turnVelocity, percent);
+  
+  LeftMotor.spinFor(degreesToTurn*-direction, deg, false);
+  RightMotor.spinFor(degreesToTurn*direction, deg, true);
 }
 
 
@@ -92,18 +104,32 @@ void turn90Deg(int direction) {
 void autonomous(void) {
   Brain.Screen.print("Mode: Auto");
 
-  driveFor(60);
-  turn90Deg(-1);
-  driveFor(-6);
-
-  //drop ball
+  turnALittle(-1);
+  wait(1, sec);
+  driveFor(18);
+  
+  // //drop ball
   FeederJoint.spinFor(1300, deg);
   Feeder.spinFor(-800, deg);
   FeederJoint.spinFor(-1300, deg);
 
   //ram ball
   driveVelocity = 80;
-  driveFor(24); 
+  driveFor(24);
+
+
+  // driveFor(60);
+  // turn90Deg(-1);
+  // driveFor(-6);
+
+  // //drop ball
+  // FeederJoint.spinFor(1300, deg);
+  // Feeder.spinFor(-800, deg);
+  // FeederJoint.spinFor(-1300, deg);
+
+  // //ram ball
+  driveVelocity = 80;
+  driveFor(24);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -119,8 +145,6 @@ void usercontrol(void) {
   Brain.Screen.clearLine(1);
   Brain.Screen.print("Mode: Drive");
 
-  LeftMotor.setVelocity(20, percent);
-  RightMotor.setVelocity(20, percent);
   while (1) {
     //Drivetrain control
     int hAxis = Controller1.Axis1.position();
@@ -150,16 +174,21 @@ void usercontrol(void) {
   }
 }
 
+
+
+
 //
 // Main will set up the competition functions and callbacks.
 //
 int main() {
+
+  // Run the pre-autonomous function.
+  pre_auton();
+
   // Set up callbacks for autonomous and driver control periods.
   Competition.autonomous(autonomous);
   Competition.drivercontrol(usercontrol);
-  
-  // Run the pre-autonomous function.
-  pre_auton();
+  // autonomous();
 
   // Prevent main from exiting with an infinite loop.
   while (true) {

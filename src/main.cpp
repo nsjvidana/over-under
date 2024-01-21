@@ -23,7 +23,6 @@ motor rBackWheel = motor(PORT2, ratio6_1, false);
 motor lFrontWheel = motor(PORT3, ratio6_1, true);
 motor rFrontWheel = motor(PORT4, ratio6_1, false);
 motor Catapult = motor(PORT10, ratio36_1, false);
-pot CatapultAngle = pot(Brain.ThreeWirePort.A);
 limit CataLimSwitch = limit(Brain.ThreeWirePort.A);
 
 drivetrain Drivetrain = drivetrain(lBackWheel, rBackWheel, 319.19, 24.5, 293, mm, 1);
@@ -106,18 +105,17 @@ void usercontrol(void) {
         int vAxis = Controller1.Axis3.position();
         int lVel = ((vAxis - hAxis)/100) * speed;
         int rVel = ((vAxis + hAxis)/100) * speed;
+        lBackWheel.setVelocity(lVel, percent);
+        rBackWheel.setVelocity(rVel, percent);
+        //making sure that the brakes on the motors work when not moving
         if(abs(lVel) == 0)
             lBackWheel.stop();
-        else {
-            lBackWheel.setVelocity(lVel, percent);
+        else 
             lBackWheel.spin(forward);
-        }
         if(abs(rVel) == 0)
             rBackWheel.stop();
-        else {
-            rBackWheel.setVelocity(rVel, percent);
+        else 
             rBackWheel.spin(forward);
-        }
         
         //catapult control
         if(Controller1.ButtonR1.pressing()) {

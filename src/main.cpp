@@ -14,25 +14,27 @@ using namespace vex;
 // A global instance of competition
 competition Competition;
 
-vex::brain       Brain;
+vex::brain Brain;
 
 controller Controller1 = controller(primary);
 
-motor LeftMotor = motor(PORT2, ratio6_1, false);
-motor RightMotor = motor(PORT1, ratio6_1, true);
+motor lBackWheel = motor(PORT1, ratio6_1, true);
+motor rBackWheel = motor(PORT2, ratio6_1, false);
+motor lFrontWheel = motor(PORT3, ratio6_1, true);
+motor rFrontWheel = motor(PORT4, ratio6_1, false);
+motor Catapult = motor(PORT10, ratio36_1, false);
+pot CatapultAngle = pot(Brain.ThreeWirePort.A);
+limit CataLimSwitch = limit(Brain.ThreeWirePort.A);
 
-// drivetrain Drivetrain = drivetrain(LeftMotor, RightMotor, 319.19, 228.6, 190.5, mm, 1);
+drivetrain Drivetrain = drivetrain(lBackWheel, rBackWheel, 319.19, 24.5, 293, mm, 1);
 
-motor Feeder = motor(PORT16, ratio18_1, false);
-motor FeederJoint = motor(PORT13, ratio36_1, false);
+bool shootToggle = false;
+int timeSinceCatapultReleased = 0;
 
 
-//in inches
-double wheelRadius = 4;
-double circumference = 2 * M_PI * wheelRadius;
-double driveVelocity = 30;
-double turnVelocity = 20;
-
+inline void updateShootToggle() {
+    shootToggle = !shootToggle;
+}
 
 /*---------------------------------------------------------------------------*/
 /*                          Pre-Autonomous Functions                         */
@@ -45,51 +47,18 @@ double turnVelocity = 20;
 /*---------------------------------------------------------------------------*/
 
 void pre_auton(void) {
-  // All activities that occur before the competition starts
-  // Example: clearing encoders, setting servo positions, ...
-  FeederJoint.setStopping(brakeType::brake);
-  FeederJoint.setVelocity(200, percent);
-  Feeder.setStopping(brakeType::brake);
+    lBackWheel.setStopping(brakeType::hold);
+    rBackWheel.setStopping(brakeType::hold);
+    Catapult.setStopping(brakeType::hold);
 
-  LeftMotor.setStopping(brakeType::brake);
-  RightMotor.setStopping(brakeType::brake);
+    Catapult.setVelocity(99, percent);
+    Catapult.setPosition(0, deg); // zero out catapult at the not-charged position
+    lBackWheel.stop();
+    rBackWheel.stop();
+    Catapult.stop();
+
+    CataLimSwitch.pressed(updateShootToggle);
 }
-
-
-/***************************Autonomous driving utils***************************/
-
-inline void driveFor(double distanceInInches) {
-  double amountOfTurns = (distanceInInches / circumference)*2;
-
-  LeftMotor.setVelocity(driveVelocity, percent);
-  RightMotor.setVelocity(driveVelocity, percent);
-
-  LeftMotor.spinFor(amountOfTurns*360, deg, false);
-  RightMotor.spinFor(amountOfTurns*360, deg, true);
-}
-
-inline void turn90Deg(int direction) {
-  double arcLength = (circumference*90)/360;
-  double degreesToTurn = (arcLength / circumference)*360*2;
-
-  LeftMotor.setVelocity(turnVelocity, percent);
-  RightMotor.setVelocity(turnVelocity, percent);
-  
-  LeftMotor.spinFor(degreesToTurn*-direction, deg, false);
-  RightMotor.spinFor(degreesToTurn*direction, deg, true);
-}
-
-inline void turnALittle(int direction) {
-  double arcLength = (circumference*90)/360;
-  double degreesToTurn = (arcLength / circumference)*360;
-
-  LeftMotor.setVelocity(turnVelocity, percent);
-  RightMotor.setVelocity(turnVelocity, percent);
-  
-  LeftMotor.spinFor(degreesToTurn*-direction, deg, false);
-  RightMotor.spinFor(degreesToTurn*direction, deg, true);
-}
-
 
 /*---------------------------------------------------------------------------*/
 /*                                                                           */
@@ -102,34 +71,19 @@ inline void turnALittle(int direction) {
 /*---------------------------------------------------------------------------*/
 
 void autonomous(void) {
-  Brain.Screen.print("Mode: Auto");
+    Brain.Screen.print("Mode: Auto");
+    lBackWheel.setVelocity(100, percent);
+    rBackWheel.setVelocity(100, percent);
+    lBackWheel.spin(forward);
+    rBackWheel.spin(forward);
+    wait(5, sec);
+    lBackWheel.spin(reverse);
+    rBackWheel.spin(reverse);
+    wait(500, msec);
 
-  turnALittle(-1);
-  wait(1, sec);
-  driveFor(18);
-  
-  // //drop ball
-  FeederJoint.spinFor(1300, deg);
-  Feeder.spinFor(-800, deg);
-  FeederJoint.spinFor(-1300, deg);
+    lBackWheel.stop();
+    rBackWheel.stop();
 
-  //ram ball
-  driveVelocity = 80;
-  driveFor(24);
-
-
-  // driveFor(60);
-  // turn90Deg(-1);
-  // driveFor(-6);
-
-  // //drop ball
-  // FeederJoint.spinFor(1300, deg);
-  // Feeder.spinFor(-800, deg);
-  // FeederJoint.spinFor(-1300, deg);
-
-  // //ram ball
-  driveVelocity = 80;
-  driveFor(24);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -142,56 +96,60 @@ void autonomous(void) {
 /*  You must modify the code to add your own robot specific commands here.   */
 /*---------------------------------------------------------------------------*/
 void usercontrol(void) {
-  Brain.Screen.clearLine(1);
-  Brain.Screen.print("Mode: Drive");
+    Brain.Screen.clearLine(1);
+    Brain.Screen.print("Mode: Drive");
 
-  while (1) {
-    //Drivetrain control
-    int hAxis = Controller1.Axis1.position();
-    int vAxis = Controller1.Axis3.position();
-    LeftMotor.setVelocity(vAxis + hAxis, percent);
-    RightMotor.setVelocity(vAxis - hAxis, percent);
-    LeftMotor.spin(forward);
-    RightMotor.spin(forward);
+    while(1) {
+        // Drivetrain control
+        int speed = Controller1.ButtonL1.pressing() ? 200:100;
+        int hAxis = Controller1.Axis1.position();
+        int vAxis = Controller1.Axis3.position();
+        int lVel = ((vAxis - hAxis)/100) * speed;
+        int rVel = ((vAxis + hAxis)/100) * speed;
+        if(abs(lVel) == 0)
+            lBackWheel.stop();
+        else {
+            lBackWheel.setVelocity(lVel, percent);
+            lBackWheel.spin(forward);
+        }
+        if(abs(rVel) == 0)
+            rBackWheel.stop();
+        else {
+            rBackWheel.setVelocity(rVel, percent);
+            rBackWheel.spin(forward);
+        }
+        
+        //catapult control
+        if(Controller1.ButtonR1.pressing()) {
+            if(!shootToggle)
+                Catapult.spin(forward);
+            else {
+                Catapult.stop();
+                if(timeSinceCatapultReleased >= 100) {
+                    shootToggle = !shootToggle;
+                    lBackWheel.spin(reverse);
+                    timeSinceCatapultReleased = 0;
+                }
+            }
+        }
+        else {
+            Catapult.stop();
+        }
 
-    //Feeder control (incomplete)
-    //  When R1 is pressed, go backward.
-    //  When R2 is pressed, go forward.
-    //  When both are pressed, don't move.
-    //  Hold X to spin feeder faster
-    int feederSpeed = Controller1.ButtonX.pressing() ? 200 : 80;
-    int feederDirection = Controller1.ButtonR2.pressing() - Controller1.ButtonR1.pressing();
-    Feeder.setVelocity(feederSpeed*feederDirection, percent);
-
-    //L1 and L2 for controlling feeder joint
-    int feederJointDirection = Controller1.ButtonL1.pressing() - Controller1.ButtonL2.pressing();
-    FeederJoint.setVelocity(50*feederJointDirection, percent);
-    Feeder.spin(forward);
-    FeederJoint.spin(forward);
-
-    wait(20, msec); // Sleep the task for a short amount of time to
-                    // prevent wasted resources.
-  }
+        if(shootToggle)
+            timeSinceCatapultReleased += 40;
+        wait(20, msec);
+    }
 }
 
 
-
-
-//
-// Main will set up the competition functions and callbacks.
-//
 int main() {
+    Competition.autonomous(autonomous);
+    Competition.drivercontrol(usercontrol);
 
-  // Run the pre-autonomous function.
-  pre_auton();
+    pre_auton();
 
-  // Set up callbacks for autonomous and driver control periods.
-  Competition.autonomous(autonomous);
-  Competition.drivercontrol(usercontrol);
-  // autonomous();
-
-  // Prevent main from exiting with an infinite loop.
-  while (true) {
-    wait(100, msec);
-  }
+    while(true) {
+        wait(5, msec);
+    }
 }

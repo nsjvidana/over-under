@@ -18,19 +18,24 @@ vex::brain Brain;
 
 controller Controller1 = controller(primary);
 
-motor lBackWheel = motor(PORT1, ratio6_1, true);
-motor rBackWheel = motor(PORT2, ratio6_1, false);
-motor lFrontWheel = motor(PORT3, ratio6_1, true);
-motor rFrontWheel = motor(PORT4, ratio6_1, false);
-motor Catapult = motor(PORT10, ratio36_1, false);
-limit CataLimSwitch = limit(Brain.ThreeWirePort.A);
+motor lBackWheel(PORT2, ratio6_1, false);
+motor lFrontWheel(PORT3, ratio6_1, false);
+motor rBackWheel(PORT1, ratio6_1, true);
+motor rFrontWheel(PORT5, ratio6_1, true);
+motor blocker(PORT4, ratio18_1, true);
 
-drivetrain Drivetrain = drivetrain(lBackWheel, rBackWheel, 319.19, 24.5, 293, mm, 1);
+motor_group leftMotors(lBackWheel, lFrontWheel);
+motor_group rightMotors(rBackWheel, rFrontWheel);
+
+motor catapult(PORT10, ratio36_1, false);
+limit cataLimSwitch(Brain.ThreeWirePort.A);
 
 bool shootToggle = false;
 int timeSinceCatapultReleased = 0;
 
-
+/**
+ * Invoked when CatapultLimSwitch is pressed
+*/
 inline void updateShootToggle() {
     shootToggle = !shootToggle;
 }
@@ -46,17 +51,20 @@ inline void updateShootToggle() {
 /*---------------------------------------------------------------------------*/
 
 void pre_auton(void) {
-    lBackWheel.setStopping(brakeType::hold);
-    rBackWheel.setStopping(brakeType::hold);
-    Catapult.setStopping(brakeType::hold);
+    leftMotors.setStopping(brake);
+    rightMotors.setStopping(brake);
+    leftMotors.stop();
+    rightMotors.stop();
 
-    Catapult.setVelocity(99, percent);
-    Catapult.setPosition(0, deg); // zero out catapult at the not-charged position
-    lBackWheel.stop();
-    rBackWheel.stop();
-    Catapult.stop();
+    catapult.setStopping(hold);
+    blocker.setStopping(hold);
+    blocker.stop();
+    catapult.stop();
 
-    CataLimSwitch.pressed(updateShootToggle);
+    catapult.setVelocity(100, percent);
+    catapult.setPosition(0, deg); // zero out catapult at the not-charged position
+
+    cataLimSwitch.pressed(updateShootToggle);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -75,14 +83,67 @@ void autonomous(void) {
     rBackWheel.setVelocity(100, percent);
     lBackWheel.spin(forward);
     rBackWheel.spin(forward);
-    wait(5, sec);
+    wait(3, sec);
     lBackWheel.spin(reverse);
     rBackWheel.spin(reverse);
     wait(500, msec);
 
     lBackWheel.stop();
     rBackWheel.stop();
+}
 
+/**
+ * 4-wheel drive.
+*/
+inline void controlDriveTrain(int hAxis, int vAxis, int speed) {
+
+    int lVel = ((vAxis + hAxis)/100.0) * speed;
+    int rVel = ((vAxis - hAxis)/100.0) * speed;
+    
+    if(lVel == 0 && rVel == 0){
+        leftMotors.stop();
+        rightMotors.stop();
+    }
+    else {
+        leftMotors.spin(forward, lVel, pct);
+        rightMotors.spin(forward, rVel, pct);
+    }
+
+}
+
+/**
+ * Press R1 to charge catapult
+*/
+inline void controlCatapult(controller::button ctrlBtn) {
+    
+    if(ctrlBtn.pressing()) {
+        if(!shootToggle) //charge catapult if don't shoot
+            catapult.spin(forward);
+        else {
+            catapult.stop();//stop charging catapult
+            if(timeSinceCatapultReleased >= 100) {//wait until catapult stopped
+                shootToggle = !shootToggle;
+                timeSinceCatapultReleased = 0;
+            }
+        }
+    }
+    else {
+        catapult.stop();
+    }
+
+    if(shootToggle)
+        timeSinceCatapultReleased += 20;
+    
+}
+
+inline void controlBlocking(controller::button upBtn, controller::button downBtn, int velPct) {
+    int dir = (int)upBtn.pressing() - (int)downBtn.pressing();
+    blocker.setVelocity(velPct * dir, pct);
+
+    if(dir == 0)
+        blocker.stop();
+    else
+        blocker.spin(forward);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -99,43 +160,16 @@ void usercontrol(void) {
     Brain.Screen.print("Mode: Drive");
 
     while(1) {
-        // Drivetrain control
-        int speed = Controller1.ButtonL1.pressing() ? 200:100;
-        int hAxis = Controller1.Axis1.position();
-        int vAxis = Controller1.Axis3.position();
-        int lVel = ((vAxis - hAxis)/100) * speed;
-        int rVel = ((vAxis + hAxis)/100) * speed;
-        lBackWheel.setVelocity(lVel, percent);
-        rBackWheel.setVelocity(rVel, percent);
-        //making sure that the brakes on the motors work when not moving
-        if(abs(lVel) == 0)
-            lBackWheel.stop();
-        else 
-            lBackWheel.spin(forward);
-        if(abs(rVel) == 0)
-            rBackWheel.stop();
-        else 
-            rBackWheel.spin(forward);
-        
-        //catapult control
-        if(Controller1.ButtonR1.pressing()) {
-            if(!shootToggle)
-                Catapult.spin(forward);
-            else {
-                Catapult.stop();
-                if(timeSinceCatapultReleased >= 100) {
-                    shootToggle = !shootToggle;
-                    lBackWheel.spin(reverse);
-                    timeSinceCatapultReleased = 0;
-                }
-            }
-        }
-        else {
-            Catapult.stop();
-        }
+        controlDriveTrain(
+            Controller1.Axis1.position(), //x-axis
+            Controller1.Axis3.position(), //y-axis
+            Controller1.ButtonR2.pressing() ? 100:35 //press R2 to boost
+        );
 
-        if(shootToggle)
-            timeSinceCatapultReleased += 40;
+        controlCatapult(Controller1.ButtonR1);
+
+        controlBlocking(Controller1.ButtonL1, Controller1.ButtonL2, 10);
+
         wait(20, msec);
     }
 }

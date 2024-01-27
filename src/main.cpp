@@ -22,22 +22,45 @@ motor lBackWheel(PORT2, ratio6_1, false);
 motor lFrontWheel(PORT3, ratio6_1, false);
 motor rBackWheel(PORT1, ratio6_1, true);
 motor rFrontWheel(PORT5, ratio6_1, true);
-motor blocker(PORT4, ratio18_1, true);
+motor wall1(PORT4, ratio18_1, false);
+motor wall2(PORT6, ratio18_1, true);
 
 motor_group leftMotors(lBackWheel, lFrontWheel);
 motor_group rightMotors(rBackWheel, rFrontWheel);
+motor_group wall(wall1, wall2);
 
 motor catapult(PORT10, ratio36_1, false);
 limit cataLimSwitch(Brain.ThreeWirePort.A);
 
 bool shootToggle = false;
 int timeSinceCatapultReleased = 0;
+brakeType driveTrainBrakeMode = brakeType::brake;
 
 /**
  * Invoked when CatapultLimSwitch is pressed
 */
 inline void updateShootToggle() {
     shootToggle = !shootToggle;
+}
+
+/**
+ * Invoked when X butotn is pressed
+*/
+
+inline void toggleBrakes() {
+    switch (driveTrainBrakeMode) {
+        case brakeType::brake:
+            driveTrainBrakeMode = brakeType::hold;
+            Controller1.Screen.setCursor(30, 10);
+            Controller1.Screen.print("brakes: ON       ");
+            break;
+        
+        default:
+            driveTrainBrakeMode = brakeType::brake;
+            Controller1.Screen.setCursor(30, 10);
+            Controller1.Screen.print("brakes: OFF       ");
+            break;
+    }
 }
 
 /*---------------------------------------------------------------------------*/
@@ -57,14 +80,18 @@ void pre_auton(void) {
     rightMotors.stop();
 
     catapult.setStopping(hold);
-    blocker.setStopping(hold);
-    blocker.stop();
+    wall.setStopping(hold);
+    wall.stop();
     catapult.stop();
 
     catapult.setVelocity(100, percent);
     catapult.setPosition(0, deg); // zero out catapult at the not-charged position
 
     cataLimSwitch.pressed(updateShootToggle);
+    Controller1.ButtonX.pressed(toggleBrakes);
+    
+    Controller1.Screen.setCursor(30, 10);
+    Controller1.Screen.print("brakes: OFF       ");
 }
 
 /*---------------------------------------------------------------------------*/
@@ -101,8 +128,8 @@ inline void controlDriveTrain(int hAxis, int vAxis, int speed) {
     int rVel = ((vAxis - hAxis)/100.0) * speed;
     
     if(lVel == 0 && rVel == 0){
-        leftMotors.stop();
-        rightMotors.stop();
+        leftMotors.stop(driveTrainBrakeMode);
+        rightMotors.stop(driveTrainBrakeMode);
     }
     else {
         leftMotors.spin(forward, lVel, pct);
@@ -136,14 +163,14 @@ inline void controlCatapult(controller::button ctrlBtn) {
     
 }
 
-inline void controlBlocking(controller::button upBtn, controller::button downBtn, int velPct) {
+inline void controlWall(controller::button upBtn, controller::button downBtn, int velPct) {
     int dir = (int)upBtn.pressing() - (int)downBtn.pressing();
-    blocker.setVelocity(velPct * dir, pct);
+    wall.setVelocity(velPct * dir, pct);
 
     if(dir == 0)
-        blocker.stop();
+        wall.stop();
     else
-        blocker.spin(forward);
+        wall.spin(forward);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -168,7 +195,7 @@ void usercontrol(void) {
 
         controlCatapult(Controller1.ButtonR1);
 
-        controlBlocking(Controller1.ButtonL1, Controller1.ButtonL2, 10);
+        controlWall(Controller1.ButtonL1, Controller1.ButtonL2, 70);
 
         wait(20, msec);
     }

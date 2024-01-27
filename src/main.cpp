@@ -106,17 +106,19 @@ void pre_auton(void) {
 
 void autonomous(void) {
     Brain.Screen.print("Mode: Auto");
-    lBackWheel.setVelocity(100, percent);
-    rBackWheel.setVelocity(100, percent);
-    lBackWheel.spin(forward);
-    rBackWheel.spin(forward);
+    leftMotors.setVelocity(100, percent);
+    rightMotors.setVelocity(100, percent);
+
+    leftMotors.spin(forward);
+    rightMotors.spin(forward);
     wait(3, sec);
-    lBackWheel.spin(reverse);
-    rBackWheel.spin(reverse);
+
+    leftMotors.spin(reverse);
+    rightMotors.spin(reverse);
     wait(500, msec);
 
-    lBackWheel.stop();
-    rBackWheel.stop();
+    leftMotors.stop();
+    rightMotors.stop();
 }
 
 /**

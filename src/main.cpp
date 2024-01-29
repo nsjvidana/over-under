@@ -9,6 +9,8 @@
 
 #include "vex.h"
 
+#define OFFENSE
+
 using namespace vex;
 
 // A global instance of competition
@@ -28,6 +30,7 @@ motor wall2(PORT6, ratio18_1, true);
 motor_group leftMotors(lBackWheel, lFrontWheel);
 motor_group rightMotors(rBackWheel, rFrontWheel);
 motor_group wall(wall1, wall2);
+drivetrain Drivetrain = drivetrain(leftMotors, rightMotors, 319.19, 235, 292, mm, 1);
 
 motor catapult(PORT10, ratio36_1, false);
 limit cataLimSwitch(Brain.ThreeWirePort.A);
@@ -44,9 +47,8 @@ inline void updateShootToggle() {
 }
 
 /**
- * Invoked when X butotn is pressed
+ * Invoked when A butotn is pressed
 */
-
 inline void toggleBrakes() {
     switch (driveTrainBrakeMode) {
         case brakeType::brake:
@@ -72,7 +74,6 @@ inline void toggleBrakes() {
 /*  function is only called once after the V5 has been powered on and        */
 /*  not every time that the robot is disabled.                               */
 /*---------------------------------------------------------------------------*/
-
 void pre_auton(void) {
     leftMotors.setStopping(brake);
     rightMotors.setStopping(brake);
@@ -84,11 +85,11 @@ void pre_auton(void) {
     wall.stop();
     catapult.stop();
 
-    catapult.setVelocity(100, percent);
+    catapult.setVelocity(80, percent);
     catapult.setPosition(0, deg); // zero out catapult at the not-charged position
 
     cataLimSwitch.pressed(updateShootToggle);
-    Controller1.ButtonX.pressed(toggleBrakes);
+    Controller1.ButtonA.pressed(toggleBrakes);
     
     Controller1.Screen.setCursor(30, 10);
     Controller1.Screen.print("brakes: OFF       ");
@@ -103,19 +104,35 @@ void pre_auton(void) {
 /*                                                                           */
 /*  You must modify the code to add your own robot specific commands here.   */
 /*---------------------------------------------------------------------------*/
-
 void autonomous(void) {
     Brain.Screen.print("Mode: Auto");
-    leftMotors.setVelocity(100, percent);
-    rightMotors.setVelocity(100, percent);
+    leftMotors.setVelocity(40, percent);
+    rightMotors.setVelocity(40, percent);
 
     leftMotors.spin(forward);
     rightMotors.spin(forward);
-    wait(3, sec);
+    wait(2, sec);
 
     leftMotors.spin(reverse);
     rightMotors.spin(reverse);
     wait(500, msec);
+
+    leftMotors.stop();
+    rightMotors.stop();
+
+    #ifdef OFFENSE
+    Drivetrain.turnFor(-65, deg);
+    Drivetrain.driveFor(24, inches);
+    Drivetrain.turnFor(30, deg);
+    wall.spinFor(forward, 3500, msec);
+    Drivetrain.driveFor(40, inches, 30);
+    #else
+    Drivetrain.turnFor(65, deg);
+    Drivetrain.driveFor(24, inches);
+    Drivetrain.turnFor(-30, deg);
+    wall.spinFor(forward, 3500, msec);
+    Drivetrain.driveFor(40, inches, 30);
+    #endif
 
     leftMotors.stop();
     rightMotors.stop();
@@ -165,6 +182,9 @@ inline void controlCatapult(controller::button ctrlBtn) {
     
 }
 
+/**
+ * Press L1/L2 to move wall up/down respectively
+*/
 inline void controlWall(controller::button upBtn, controller::button downBtn, int velPct) {
     int dir = (int)upBtn.pressing() - (int)downBtn.pressing();
     wall.setVelocity(velPct * dir, pct);

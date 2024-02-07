@@ -30,7 +30,8 @@ motor wall2(PORT6, ratio18_1, true);
 motor_group leftMotors(lBackWheel, lFrontWheel);
 motor_group rightMotors(rBackWheel, rFrontWheel);
 motor_group wall(wall1, wall2);
-drivetrain Drivetrain = drivetrain(leftMotors, rightMotors, 319.19, 235, 292, mm, 1);
+inertial driveInertial(PORT8);
+smartdrive drive = smartdrive(leftMotors, rightMotors, driveInertial, 319.19, 235, 292, mm, 1);
 
 motor catapult(PORT10, ratio36_1, false);
 limit cataLimSwitch(Brain.ThreeWirePort.A);
@@ -104,8 +105,7 @@ void pre_auton(void) {
 /*                                                                           */
 /*  You must modify the code to add your own robot specific commands here.   */
 /*---------------------------------------------------------------------------*/
-void autonomous(void) {
-    Brain.Screen.print("Mode: Auto");
+void autonomous(void) {Brain.Screen.print("Mode: Auto");
     leftMotors.setVelocity(40, percent);
     rightMotors.setVelocity(40, percent);
 
@@ -121,11 +121,12 @@ void autonomous(void) {
     rightMotors.stop();
 
     #ifdef OFFENSE
-    Drivetrain.turnFor(-65, deg);
-    Drivetrain.driveFor(24, inches);
-    Drivetrain.turnFor(30, deg);
+    drive.turnFor(-130, deg);
+    drive.driveFor(24, inches);
+    wait(500, msec);
+    drive.turnFor(30, deg);
     wall.spinFor(forward, 3500, msec);
-    Drivetrain.driveFor(40, inches, 30);
+    drive.driveFor(40, inches, 30);
     #else
     Drivetrain.turnFor(65, deg);
     Drivetrain.driveFor(24, inches);
